@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam Test - Sign Language Recognition</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 720px;
+      width: 100%;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: #38bdf8;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      aspect-ratio: 4 / 3;
+      margin: 0 auto 20px;
+      background: #020617;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* Mirror feed horizontally for natural interaction */
+      display: none;
+    }
+
+    video.active {
+      display: block;
+    }
+
+    .placeholder {
+      color: #64748b;
+      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-start {
+      background-color: #0284c7;
+      color: white;
+    }
+
+    .btn-start:hover:not(:disabled) {
+      background-color: #0369a1;
+    }
+
+    .btn-stop {
+      background-color: #ef4444;
+      color: white;
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      background-color: #dc2626;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .status-box {
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      text-align: left;
+    }
+
+    .status-box.success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+
+    .status-box.error {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .resolution-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #334155;
+      font-size: 0.8rem;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Webcam Test</h1>
+    <p class="subtitle">Real-Time Sign Language Recognition - Browser Camera Verification</p>
+
+    <div class="video-wrapper">
+      <div id="placeholder" class="placeholder">
+        <span>Camera is currently off</span>
+        <span style="font-size: 0.85rem; color: #475569;">Click "Start Camera" to test your webcam feed</span>
+      </div>
+      <video id="webcam" autoplay playsinline muted width="640" height="480"></video>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="btn-start">Start Camera</button>
+      <button id="stopBtn" class="btn-stop" disabled>Stop Camera</button>
+    </div>
+
+    <div id="statusBox" class="status-box">
+      <strong>Status:</strong> Idle. Waiting to start webcam.
+    </div>
+  </div>
+
+  <script>
+    const webcamVideo = document.getElementById('webcam');
+    const placeholder = document.getElementById('placeholder');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusBox = document.getElementById('statusBox');
+
+    let currentStream = null;
+
+    function setStatus(message, type = 'info') {
+      statusBox.className = 'status-box ' + type;
+      statusBox.innerHTML = message;
+    }
+
+    async function startCamera() {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('<strong>Error:</strong> Your browser does not support the <code>navigator.mediaDevices.getUserMedia</code> API. Please try a modern browser like Chrome, Edge, or Firefox, and ensure you are using HTTPS or localhost.', 'error');
+        return;
+      }
+
+      setStatus('Requesting camera access...', 'info');
+      startBtn.disabled = true;
+
+      const constraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: 'user'
+        },
+        audio: false
+      };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
+        webcamVideo.srcObject = stream;
+        webcamVideo.classList.add('active');
+        placeholder.style.display = 'none';
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        // Display actual video resolution when stream metadata loads
+        webcamVideo.onloadedmetadata = () => {
+          const width = webcamVideo.videoWidth;
+          const height = webcamVideo.videoHeight;
+          setStatus(`<strong>Success:</strong> Webcam is active and streaming.<br><span class="resolution-badge">Resolution: ${width} × ${height}</span>`, 'success');
+        };
+      } catch (err) {
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        handleCameraError(err);
+      }
+    }
+
+    function stopCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+      }
+
+      webcamVideo.srcObject = null;
+      webcamVideo.classList.remove('active');
+      placeholder.style.display = 'flex';
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      setStatus('<strong>Status:</strong> Camera stopped successfully.', 'info');
+    }
+
+    function handleCameraError(error) {
+      console.error('Webcam Access Error:', error);
+      let errorMsg = `<strong>Camera Error:</strong> ${error.name} - ${error.message}`;
+
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMsg = '<strong>Permission Denied:</strong> Camera access was blocked. Please click the camera/lock icon in your browser\'s address bar and allow camera access for this page.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMsg = '<strong>No Camera Found:</strong> No webcam device was detected. Please verify your camera is connected and recognized in Windows Device Manager.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMsg = '<strong>Camera In Use:</strong> The webcam is currently being used by another application (e.g., Zoom, Teams, Skype, or another tab). Please close other apps and try again.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMsg = '<strong>Constraints Error:</strong> The requested 640 × 480 resolution constraint could not be satisfied by your camera.';
+      } else if (error.name === 'SecurityError') {
+        errorMsg = '<strong>Security Error:</strong> Camera access requires a secure context (HTTPS or localhost). If opening from file://, consider serving the folder using a local server (e.g., <code>python -m http.server</code>).';
+      }
+
+      setStatus(errorMsg, 'error');
+    }
+
+    startBtn.addEventListener('click', startCamera);
+    stopBtn.addEventListener('click', stopCamera);
+
+    // Stop camera when navigating away or closing tab
+    window.addEventListener('beforeunload', stopCamera);
+  </script>
+</body>
+</html>

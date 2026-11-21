@@ -1,0 +1,63 @@
+# ── Python virtual environment ────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Python cache ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ── Jupyter / IPython ─────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── MediaPipe binary model (~7.8 MB) — too large for a free GitHub push ───────
+# Users can download it automatically via the app (the code handles this).
+models/hand_landmarker.task
+
+# ── Trained model binaries (.pkl) — regenerate with train_model.py ───────────
+saved_model/sign_language_model.pkl
+saved_model/label_encoder.pkl
+
+# ── Large dataset CSV files ───────────────────────────────────────────────────
+# Raw and cleaned collected data (can be regenerated with data_collection.py).
+dataset/landmarks_data.csv
+dataset/cleaned_landmarks_data.csv
+dataset/train_data.csv
+dataset/test_data.csv
+
+# Keep the .gitkeep placeholder so folder structure is preserved in the repo
+!dataset/.gitkeep
+!saved_model/.gitkeep
+!results/.gitkeep
+!models/.gitkeep
+!app/.gitkeep
+!realtime/.gitkeep
+!preprocessing/.gitkeep
+!utils/.gitkeep
+
+# ── Result images & reports ───────────────────────────────────────────────────
+# Optional: comment these lines out if you WANT to push your result graphs.
+# results/confusion_matrix.png
+# results/model_comparison.png
+# results/classification_report.txt
+
+# ── OS / IDE ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Logs & temp ───────────────────────────────────────────────────────────────
+*.log
+*.tmp
+tmp/
